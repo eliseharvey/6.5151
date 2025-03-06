@@ -1,0 +1,54 @@
+
+                  Note on Mac support for Problem Set 1
+                               Spring 2015
+
+   Problem Set 1 makes use of the system grep utility.
+
+   It was designed for use with a GNU system (GNU grep) and the
+   initial implementation of (r:repeat) relies on an undocumented GNU
+   extension in grep.
+
+   This "subtle bug" is the topic of Problem 1.2. Problem 1.2d
+   involves rewriting (r:repeat) to use a different approach that
+   conforms to the POSIX standard.
+
+----
+
+Problem:
+
+    Mac OS X includes a slightly different version of grep (BSD
+    grep).
+
+    Thus, the initial (r:repeat) implementation provided will not
+    execute correctly on a Mac until it is fixed in problem 1.2d.
+
+    Specifically, you will find that any call to (r:grep) expression
+    including (r:repeat) will yield a grep error that will appear as
+    r:grep returning #f rather than the matching lines.
+
+----
+
+Resolution:
+
+(1) The simplest resolution to get r:grep fully working on Mac and
+    complete the rest of the problem set is to just fix (r:repeat) by
+    understanding and completing problem 1.2d, and ignore any
+    erroneous behavior arising from using (r:repeat) in the initial
+    code/examples.
+
+(2) The other option is to install GNU grep so that the system and
+    examples work as provided. GNU grep is available from
+    http://ftp.gnu.org/gnu/grep/.
+
+    The standard "./configure; sudo make install" worked on my Mac and
+    installed the GNU grep in /usr/local/bin/grep. Rather than messing
+    with the emacs/scheme shell PATH, I manually replaced the "grep"
+    command with "/usr/local/bin/grep" in the command-string and
+    r:grep* definitions.
+
+    "grep --version" will display which grep you have installed
+
+----
+
+    Email manjola@mit.edu if you are having any issues completing the
+    problem set.
