@@ -164,7 +164,8 @@ along with SDF.  If not, see <https://www.gnu.org/licenses/>.
         (great-court (create-place 'great-court))
         (bldg-54 (create-place 'green-building))
         (the-dot (create-place 'the-dot))
-        (dorm-row (create-place 'dorm-row)))
+        (dorm-row (create-place 'dorm-row))
+        (medical (create-place 'medical)))
 
     (can-go-both-ways lobby-10 'up 'down 10-250)
     (can-go-both-ways 10-250 'up 'down barker-library)
@@ -181,6 +182,8 @@ along with SDF.  If not, see <https://www.gnu.org/licenses/>.
     (can-go-both-ways cp32 'south 'north tunnel)
     (can-go-both-ways tunnel 'up 'down bldg-54)
     (can-go-both-ways bldg-54 'south 'north the-dot)
+    (can-go-both-ways bldg-54 'up 'down medical)
+    (can-go-both-ways medical 'north 'south 32G)
     (can-go-both-ways the-dot 'west 'east great-court)
     (can-go-both-ways student-street 'in 'out 32-123)
     (can-go-both-ways student-street 'up 'down 32G)
@@ -201,6 +204,8 @@ along with SDF.  If not, see <https://www.gnu.org/licenses/>.
     (can-see-both-ways lobby-7 infinite)
     (can-see-both-ways infinite bldg-26)
     (can-see-both-ways lobby-10 lobby-7)
+    (can-see-both-ways bldg-54 medical)
+    (can-see-both-ways 32G medical)
 
     ; Create some things
     (create-thing 'blackboard 10-250)
@@ -217,7 +222,7 @@ along with SDF.  If not, see <https://www.gnu.org/licenses/>.
           infinite bldg-26 cp32
           tunnel 32-123 32D 32G
           student-street bldg-54 the-dot
-          dorm-row)))
+          dorm-row medical)))
 
 (define (create-people places)
   (append (create-students places)

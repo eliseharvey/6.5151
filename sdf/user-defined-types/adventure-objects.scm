@@ -199,7 +199,7 @@ along with SDF.  If not, see <https://www.gnu.org/licenses/>.
 (define person:health
   (make-property 'health
                  'predicate n:exact-integer?
-                 'default-value 3))
+                 'default-value 10))
 
 (define person:bag
   (make-property 'bag
@@ -237,7 +237,15 @@ along with SDF.  If not, see <https://www.gnu.org/licenses/>.
               person)
     (let ((people (people-here person)))
       (if (n:pair? people)
-          (say! person (cons "Hi" people))))))
+          (say! person (cons "Hi" people))))
+    ;; ADDED healing if in medical
+    (if (eq? (get-location person) (find-object-by-name 'medical (get-all-places)))
+        (let ((person-health (get-health person)))
+          (if (< person-health 10)
+              (begin
+                (set-health! person 10)
+                (say! person (list "I am fully healed!")))
+              (say! person (list "I am fully healthy already! No healing is needed.")))))))
 
 (define (when-alive callback)
   (lambda (person)
@@ -279,6 +287,16 @@ along with SDF.  If not, see <https://www.gnu.org/licenses/>.
   (guarantee n:exact-positive-integer? health)
   (set-health! person health)
   (move! person (get-origin person) person))
+
+;; ADDED healing mechanism
+(define (heal-person! person)
+  (let ((current-health (get-health person)))
+    (if (< current-health 10)
+        (begin
+          (set-health! person (+ current-health 1))
+          (say! person (list "I am healing! I can now take" (get-health person) "bites!"))))))
+
+(define-clock-handler person? heal-person!)
 
 ;;; Bags
 
@@ -431,7 +449,7 @@ along with SDF.  If not, see <https://www.gnu.org/licenses/>.
             (let ((victim (random-choice people)))
               (narrate! (list troll "takes a bite out of" victim)
                         troll)
-              (suffer! (random-number 3) victim))))))
+              (suffer! (random-number 10) victim))))))
 
 (define-clock-handler troll? eat-people!)
 
