@@ -208,6 +208,8 @@ along with SDF.  If not, see <https://www.gnu.org/licenses/>.
     (can-see-both-ways 32G medical)
 
     ; Create some things
+    (create-thing 'vending-machine lobby-7)
+    (create-thing 'vending-machine lobby-10)
     (create-thing 'blackboard 10-250)
     (create-thing 'lovely-trees great-court)
     (create-thing 'flag-pole great-court)

@@ -207,8 +207,14 @@ along with SDF.  If not, see <https://www.gnu.org/licenses/>.
                  'default-supplier
                  (lambda () (make-bag 'name 'my-bag))))
 
+;; ADDED a wallet with $5
+(define person:wallet
+  (make-property 'wallet
+                 'predicate n:real?
+                 'default-value 5))
+
 (define person?
-  (make-type 'person (list person:health person:bag)))
+  (make-type 'person (list person:health person:bag person:wallet)))
 (set-predicate<=! person? mobile-thing?)
 
 (define get-health
@@ -216,6 +222,13 @@ along with SDF.  If not, see <https://www.gnu.org/licenses/>.
 
 (define set-health!
   (property-setter person:health person? any-object?))
+
+;; ADDED wallet getter and setter
+(define get-wallet
+  (property-getter person:wallet person?))
+
+(define set-wallet!
+  (property-setter person:wallet person? n:real?))
 
 (define get-bag
   (property-getter person:bag person?))
@@ -288,6 +301,81 @@ along with SDF.  If not, see <https://www.gnu.org/licenses/>.
   (set-health! person health)
   (move! person (get-origin person) person))
 
+;; ADDED buying food
+(define (buy-food! person amount)
+  (let ((location (get-location person))
+        (current-money (get-wallet person))
+        (current-health (get-health person)))
+    ; confirm a vending machine is at the location
+    (if (not (find-object-by-name 'vending-machine (get-things location)))
+        (announce! (list "There are no vending machine here!"))
+        ; make sure not already at full health
+        (if (>= current-health 10)
+            (announce! (list "Silly goose! You are at full health, you don't need food!"))
+            ; if can buy food, see how much (not exceeding 10)
+            (let* ((max-affordable (floor (/ current-money 1)))
+                   (max-needed (- 10 current-health))  
+                   (actual-purchase (min amount max-affordable max-needed))  
+                   (cost (* actual-purchase 1))  
+                   (remaining-money (- current-money cost)))  
+              ; narrate adjsutment if needed
+              (if (< actual-purchase amount)
+                  (announce! (list "Vending machine: You couldn't buy" amount "units, but you bought" actual-purchase "instead."))) 
+              ; update wallet and health
+              (set-wallet! person remaining-money)
+              (set-health! person (+ current-health actual-purchase))
+              ; announce the transaction
+              (announce! (list "Vending machine: You are healthier! Your health is now" (get-health person) "and your new balance is $" remaining-money "!")))))))
+
+;; ADDED fight
+(define (fight! attacker defender-name)
+  ; get the defender (object NOT just anme)
+  (let ((defender (find-object-by-name defender-name (people-here attacker))))
+    (if (not defender)
+        (announce! (list "There is no one named" defender-name "here to fight!"))
+        (if (not (and (person? attacker) (or (person? defender) (troll? defender))))
+            (announce! (list "You can't fight that!"))
+            ; fighting a troll
+            (if (troll? defender)
+                (if (flip-coin 0.5)  ; 50% chance 
+                    (begin
+                      (say! attacker (list "I defeated" (get-name defender) "!"))
+                      (suffer! 1 attacker)  
+                      (announce! (list (get-name defender) "lets out a horrible roar and collapses!"))
+                      (move! defender (get-heaven) defender))  ; move troll to heaven?
+                    ; troll wins
+                    (begin
+                      (say! defender (list "Hah! I win, " (get-name attacker) " is finished!"))
+                      (die! attacker)))
+                ; fighting a persom
+                (let ((attacker-health (get-health attacker))
+                      (defender-health (get-health defender))
+                      (attacker-money (get-wallet attacker))
+                      (defender-money (get-wallet defender)))
+                  (cond 
+                    ; attacker wins
+                    ((> attacker-health defender-health)
+                     (say! attacker (list "I defeated" (get-name defender) "!"))
+                     (suffer! 1 attacker)
+                     (set-wallet! attacker (+ attacker-money defender-money))
+                     (set-wallet! defender 0)  
+                     (say! attacker (list "I took all of" (get-name defender) "'s money! I now have $" (get-wallet attacker) "!"))
+                     (die! defender))
+                    ; defender wins
+                    ((< attacker-health defender-health)
+                     (say! defender (list "I defeated" (get-name attacker) "!"))
+                     (suffer! 1 defender)
+                     (set-wallet! defender (+ defender-money attacker-money))  
+                     (set-wallet! attacker 0) 
+                     (say! defender (list "I took all of" (get-name attacker) "'s money! I now have $" (get-wallet defender) "!"))
+                     (die! attacker))
+                    ; they tie
+                    (else
+                     (announce! (list "It's a fair fight! You both take damage."))
+                     (suffer! 1 attacker)
+                     (suffer! 1 defender)))))))))
+
+
 ;; ADDED healing mechanism
 (define (heal-person! person)
   (let ((current-health (get-health person)))
@@ -297,6 +385,13 @@ along with SDF.  If not, see <https://www.gnu.org/licenses/>.
           (say! person (list "I am healing! I can now take" (get-health person) "bites!"))))))
 
 (define-clock-handler person? heal-person!)
+
+;; ADDED wallet
+(define (accrue-interest! person)
+  (let ((current-money (get-wallet person)))
+    (set-wallet! person (+ current-money 0.1))))
+
+(define-clock-handler person? accrue-interest!)
 
 ;;; Bags
 
