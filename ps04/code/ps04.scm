@@ -254,7 +254,9 @@ If you fight another person in the world, then it comes down to has the higher h
 Elise says: I defeated grendel !
 Elise says: Ouch! 1 hits is more than I want!
 grendel lets out a horrible roar and collapses!
-
+.
+.
+.
 (fight! my-avatar 'course-6-frosh)
 course-6-frosh says: I defeated Elise !
 course-6-frosh says: Ouch! 1 hits is more than I want!
