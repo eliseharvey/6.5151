@@ -106,6 +106,44 @@ along with SDF.  If not, see <https://www.gnu.org/licenses/>.
           ((null? value) (ok n))
           (else #f))))
 
+(define (match:collect variable)
+  (define (collect-match data dictionary succeed)
+    (and (pair? data)
+         (match:satisfies-restriction? variable (car data))
+         (let* ((current-value (car data))
+                (binding (match:lookup variable dictionary)))
+           (if binding
+               (let ((existing-value (match:binding-value binding)))
+                 (cond
+                  ;; If value already matched exactly
+                  ((or (equal? existing-value current-value)
+                       (and (list? existing-value)
+                            (member current-value existing-value)))
+                   (succeed dictionary 1))
+                  ;; If already a list — prepend new value
+                  ((list? existing-value)
+                   (succeed
+                    (match:extend-dict variable
+                                       (cons current-value existing-value)
+                                       dictionary)
+                    1))
+                  ;; Not a list yet — wrap both in a list
+                  (else
+                   (succeed
+                    (match:extend-dict variable
+                                       (list current-value existing-value)
+                                       dictionary)
+                    1))))
+               ;; First time — wrap in list
+               (succeed
+                (match:extend-dict variable
+                                   current-value
+                                   dictionary)
+                1)))))
+  collect-match)
+
+(define match:var-types '(? ?? $))
+
 (define (match:list matchers)
   (define (list-match data dictionary succeed)
     (and (pair? data)
@@ -155,6 +193,7 @@ along with SDF.  If not, see <https://www.gnu.org/licenses/>.
          (case (match:var-type pattern)
            ((?) (match:element pattern))
            ((??) (match:segment pattern))
+           ((\$) (match:collect pattern)) ; NEW HANDLING FOR COLLECT
            (else (error "Unknown var type:" pattern))))
         ((list? pattern)
          (match:list (map match:compile-pattern pattern)))
