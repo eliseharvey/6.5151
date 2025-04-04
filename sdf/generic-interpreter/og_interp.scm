@@ -47,35 +47,6 @@ along with SDF.  If not, see <https://www.gnu.org/licenses/>.
 (define g:advance
   (simple-generic-procedure 'g:advance 1 (lambda (x) x)))
 
-;; NEW handling macros
-(define (define-macro name transformer)
-  (define-variable! name
-    (make-macro transformer)
-    (current-environment)))
-
-(define (expand-macro macro expression)
-  ((macro-transformer macro) expression))
-
-(define (make-macro transformer)
-  (list 'macro transformer))
-
-(define (macro? obj)
-  (and (pair? obj) (eq? (car obj) 'macro)))
-
-(define (macro-transformer macro)
-  (cadr macro))
-
-;; coderef: macros
-(define-generic-procedure-handler g:eval
-  (match-args application? environment?)
-  (lambda (expression environment)
-    (let ((operator (g:eval (operator expression) environment)))
-      (if (macro? operator)
-          ;; expand and re-evaluate
-          (g:eval (expand-macro operator expression) environment)
-          ;; apply as usual
-          (g:apply operator (operands expression) environment)))))
-
 ;; coderef: self-evaluating
 (define-generic-procedure-handler g:eval
   (match-args self-evaluating? environment?)
@@ -200,24 +171,6 @@ along with SDF.  If not, see <https://www.gnu.org/licenses/>.
   (and (compound-procedure? object)
        (every symbol? (procedure-parameters object))))
 
-;; NEW vector application
-(define (vector-of-procedures? obj)
-  (and (vector? obj)
-       (every procedure? (vector->list obj))))
-
-(define-generic-procedure-handler g:apply
-  (match-args vector-of-procedures? operands? environment?)
-  (lambda (procedure operands calling-environment)
-    (let ((evaluated-args (eval-operands operands calling-environment)))
-      (list->vector
-       (map (lambda (proc)
-              (g:apply proc
-                       (map (lambda (arg) `(quote ,arg)) ; wrap args as literals
-                            evaluated-args)
-                       calling-environment))
-            (vector->list procedure))))))
-
-
 ;; coderef: strict-compound-procedure
 (define-generic-procedure-handler g:apply
   (match-args strict-compound-procedure? operands? environment?)
@@ -230,66 +183,3 @@ along with SDF.  If not, see <https://www.gnu.org/licenses/>.
              (procedure-parameters procedure)
              (eval-operands operands calling-environment)
              (procedure-environment procedure)))))
-
-;; coderef: restricted parameters
-(define (decorated-compound-procedure? p)
-  (and (compound-procedure? p)
-       (every (lambda (param)
-                (or (symbol? param)
-                    (and (pair? param)
-                         (assq 'name param)
-                         (assq 'declarations param))))
-              (procedure-parameters p))))
-
-(define-generic-procedure-handler g:apply
-  (match-args decorated-compound-procedure? operands? environment?)
-  (lambda (procedure operands calling-environment)
-    (let ((params (procedure-parameters procedure)))
-      (if (not (= (length params) (length operands)))
-          (error "Incorrect number of arguments"))
-      (let ((evaluated-args (eval-operands operands calling-environment)))
-        (let ((names '())
-              (values '()))
-          (for-each (lambda (param arg)
-                      (let ((name (cdr (assoc 'name param)))
-                            (decls (cdr (assoc 'declarations param))))
-                        ;; declarations
-                        (for-each
-                         (lambda (decl)
-                           (if (and (pair? decl)
-                                    (eq? (car decl) 'restrict-to))
-                               (let ((pred (cadr decl)))
-                                 (if (not ((eval pred) arg))
-                                     (error "Argument does not satisfy restriction"
-                                            name pred arg)))
-                               #f)) ; do nothing
-                         decls)
-                        (set! names (cons name names))
-                        (set! values (cons arg values))))
-                    params evaluated-args)
-          ;; evaluate procedure body in extended env
-          (g:eval (procedure-body procedure)
-                  (extend-environment (reverse names)
-                                      (reverse values)
-                                      (procedure-environment procedure))))))))
-
-(define (parse-parameter param)
-  (cond ((symbol? param)
-         `((name . ,param) (declarations . ()))) ; plain param
-        ((pair? param)
-         (let ((name (car param))
-               (decls (cdr param)))
-           `((name . ,name) (declarations . ,decls))))
-        (else
-         (error "Invalid parameter format" param))))
-
-(define (make-compound-procedure parsed-params body env)
-  (list 'compound-procedure parsed-params body env))
-
-;; selectors
-(define (compound-procedure? p)
-  (and (pair? p) (eq? (car p) 'compound-procedure)))
-
-(define (procedure-parameters p) (cadr p))
-(define (procedure-body p) (caddr p))
-(define (procedure-environment p) (cadddr p))
