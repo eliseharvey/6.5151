@@ -32,6 +32,8 @@ along with SDF.  If not, see <https://www.gnu.org/licenses/>.
   (make-executor (a:analyze exp)
                  check-executor-args))
 
+
+
 (define (check-executor-args env succeed fail)
   (if (not (success? succeed))
       (error "Illegal succeed:" succeed))
@@ -44,8 +46,24 @@ along with SDF.  If not, see <https://www.gnu.org/licenses/>.
               (a:advance value succeed fail-1))
             fail))
 
+;; if-fail
+(define (if-fail? exp)
+  (and (pair? exp) (eq? (car exp) 'if-fail)))
+
+(define (if-fail-try exp) (cadr exp))
+(define (if-fail-fallback exp) (caddr exp))
+
+(define (analyze-if-fail exp)
+  (let ((try-proc (a:analyze (if-fail-try exp)))
+        (fallback-proc (a:analyze (if-fail-fallback exp))))
+    (lambda (env succeed fail)
+      (try-proc env succeed
+                (lambda ()
+                  (fallback-proc env succeed fail))))))
+
 (define (default-analyze exp)
-  (cond ((application? exp) (analyze-application exp))
+  (cond ((if-fail? exp) (analyze-if-fail exp))
+        ((application? exp) (analyze-application exp))
         (else (error "Unknown expression type" exp))))
 
 (define a:analyze
